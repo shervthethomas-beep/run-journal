@@ -2,59 +2,97 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Run Journal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+  <title>Training Timetable</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header class="app-header">
-    <h1>🏃 Run Journal</h1>
+    <h1>📅 Training Timetable</h1>
+    <p class="app-subtitle">Shared team log — anyone with the link can view and add entries</p>
   </header>
 
   <main id="app">
-    <!-- LIST VIEW: shows all past entries -->
-    <section id="list-view" class="view">
-      <button id="new-entry-btn" class="primary-btn">+ New Entry</button>
-      <div id="entries-list" class="entries-list">
-        <!-- entries get inserted here by JavaScript -->
+    <!-- Connection warning shown if config.js hasn't been set up -->
+    <p id="config-warning" class="config-warning" hidden>
+      ⚠️ Supabase isn't configured yet. Open <code>config.js</code> and add your
+      Supabase URL and anon key. See the README for step-by-step instructions.
+    </p>
+
+    <section class="calendar-toolbar">
+      <button id="prev-month-btn" class="icon-btn" aria-label="Previous month">‹</button>
+      <div class="calendar-title">
+        <h2 id="month-label">Month Year</h2>
+        <button id="today-btn" class="link-btn">Today</button>
       </div>
-      <p id="empty-message" class="empty-message" hidden>
-        No entries yet. Tap "New Entry" to log your first run!
-      </p>
+      <button id="next-month-btn" class="icon-btn" aria-label="Next month">›</button>
     </section>
 
-    <!-- FORM VIEW: used for both adding a new entry and editing an old one -->
-    <section id="form-view" class="view" hidden>
-      <form id="entry-form">
-        <label for="entry-date">Date</label>
-        <input type="date" id="entry-date" required />
+    <div class="calendar-weekdays">
+      <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span>
+      <span>Thu</span><span>Fri</span><span>Sat</span>
+    </div>
 
-        <label for="entry-distance">Distance (miles or km)</label>
-        <input
-          type="number"
-          id="entry-distance"
-          step="0.01"
-          min="0"
-          placeholder="e.g. 5.2"
-          required
-        />
+    <div id="calendar-grid" class="calendar-grid" aria-live="polite"></div>
 
-        <label for="entry-notes">Thoughts / quotes from the run</label>
-        <textarea
-          id="entry-notes"
-          rows="6"
-          placeholder="How did it feel? Anything you want to remember?"
-        ></textarea>
-
-        <div class="form-actions">
-          <button type="submit" class="primary-btn">Save</button>
-          <button type="button" id="cancel-btn" class="secondary-btn">Cancel</button>
-          <button type="button" id="delete-btn" class="danger-btn" hidden>Delete</button>
-        </div>
-      </form>
-    </section>
+    <p id="loading-message" class="loading-message">Loading entries…</p>
   </main>
 
+  <button id="add-entry-fab" class="fab" aria-label="Add new entry">+</button>
+
+  <!-- ADD / EDIT ENTRY MODAL -->
+  <dialog id="entry-modal" class="modal">
+    <form id="entry-form" method="dialog">
+      <h2>New Entry</h2>
+
+      <label for="entry-date">Date</label>
+      <input type="date" id="entry-date" required />
+
+      <label for="entry-name">Name</label>
+      <select id="entry-name" required>
+        <option value="" disabled selected>Select a name…</option>
+        <option>Kohsheen Handu</option>
+        <option>Saksham Sahni</option>
+        <option>Wendy Richards</option>
+        <option>Kristine Daylisan</option>
+        <option>Shervin Thomas</option>
+        <option>Mae Arranchado</option>
+      </select>
+
+      <label for="entry-department">Department</label>
+      <select id="entry-department" required>
+        <option value="" disabled selected>Select a department…</option>
+        <option>F&amp;B Training</option>
+        <option>FO Training</option>
+        <option>HK Training</option>
+        <option>General Training</option>
+        <option>Admin</option>
+      </select>
+
+      <label for="entry-activity">What did you work on</label>
+      <textarea id="entry-activity" rows="4" placeholder="Describe the training / task…" required></textarea>
+
+      <p id="entry-form-error" class="form-error" hidden></p>
+
+      <div class="form-actions">
+        <button type="submit" id="save-entry-btn" class="primary-btn">Save</button>
+        <button type="button" id="cancel-entry-btn" class="secondary-btn">Cancel</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- DAY DETAILS MODAL -->
+  <dialog id="day-modal" class="modal">
+    <h2 id="day-modal-title">Entries</h2>
+    <div id="day-modal-list" class="day-entries-list"></div>
+    <div class="form-actions">
+      <button type="button" id="add-for-day-btn" class="primary-btn">+ Add entry for this day</button>
+      <button type="button" id="close-day-modal-btn" class="secondary-btn">Close</button>
+    </div>
+  </dialog>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="config.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
