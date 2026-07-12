@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Run Journal</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1>🏃 Run Journal</h1>
+  </header>
+
+  <main id="app">
+    <!-- LIST VIEW: shows all past entries -->
+    <section id="list-view" class="view">
+      <button id="new-entry-btn" class="primary-btn">+ New Entry</button>
+      <div id="entries-list" class="entries-list">
+        <!-- entries get inserted here by JavaScript -->
+      </div>
+      <p id="empty-message" class="empty-message" hidden>
+        No entries yet. Tap "New Entry" to log your first run!
+      </p>
+    </section>
+
+    <!-- FORM VIEW: used for both adding a new entry and editing an old one -->
+    <section id="form-view" class="view" hidden>
+      <form id="entry-form">
+        <label for="entry-date">Date</label>
+        <input type="date" id="entry-date" required />
+
+        <label for="entry-distance">Distance (miles or km)</label>
+        <input
+          type="number"
+          id="entry-distance"
+          step="0.01"
+          min="0"
+          placeholder="e.g. 5.2"
+          required
+        />
+
+        <label for="entry-notes">Thoughts / quotes from the run</label>
+        <textarea
+          id="entry-notes"
+          rows="6"
+          placeholder="How did it feel? Anything you want to remember?"
+        ></textarea>
+
+        <div class="form-actions">
+          <button type="submit" class="primary-btn">Save</button>
+          <button type="button" id="cancel-btn" class="secondary-btn">Cancel</button>
+          <button type="button" id="delete-btn" class="danger-btn" hidden>Delete</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

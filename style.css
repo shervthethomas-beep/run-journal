@@ -1,0 +1,159 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  background: #f5f6f8;
+  color: #1a1a1a;
+}
+
+.app-header {
+  background: #2f6f4f;
+  color: white;
+  padding: 1rem;
+  text-align: center;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+#app {
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.view[hidden] {
+  display: none;
+}
+
+/* Buttons */
+button {
+  font-size: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+
+.primary-btn {
+  background: #2f6f4f;
+  color: white;
+  width: 100%;
+  font-weight: 600;
+}
+
+.primary-btn:active {
+  background: #255c40;
+}
+
+.secondary-btn {
+  background: #e2e4e8;
+  color: #1a1a1a;
+}
+
+.danger-btn {
+  background: #d9534f;
+  color: white;
+  margin-left: auto;
+}
+
+#new-entry-btn {
+  margin-bottom: 1rem;
+}
+
+/* Entries list */
+.entries-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.entry-card {
+  background: white;
+  border-radius: 10px;
+  padding: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+}
+
+.entry-card:active {
+  background: #eef1ee;
+}
+
+.entry-card-top {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+}
+
+.entry-card-date {
+  color: #2f6f4f;
+}
+
+.entry-card-distance {
+  color: #1a1a1a;
+}
+
+.entry-card-notes {
+  margin-top: 0.4rem;
+  color: #555;
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.empty-message {
+  text-align: center;
+  color: #777;
+  margin-top: 2rem;
+}
+
+/* Form */
+form {
+  display: flex;
+  flex-direction: column;
+  background: white;
+  padding: 1rem;
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+label {
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.3rem;
+}
+
+input,
+textarea {
+  font-size: 1rem;
+  padding: 0.6rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-family: inherit;
+  width: 100%;
+}
+
+textarea {
+  resize: vertical;
+}
+
+.form-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.form-actions .primary-btn,
+.form-actions .secondary-btn {
+  flex: 1;
+}
