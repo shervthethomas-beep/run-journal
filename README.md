@@ -70,19 +70,19 @@ everyone (with no login) read and add entries, and see updates live.
 
 ## Step 5 — Publish the app with GitHub Pages
 
+This repository already includes a GitHub Actions workflow
+(`.github/workflows/deploy-pages.yml`) that automatically builds and
+publishes the site to GitHub Pages every time changes land on `main` —
+including turning Pages on for you the first time, so there's nothing
+to configure by hand.
+
 1. Commit and push your changes (including your edited `config.js`) to
    the `main` branch of this repository on GitHub.
    - If you're working with Claude, just ask it to commit and push your
-     changes — that's already been done for you if you're reading this
-     after the initial setup.
-2. On GitHub, go to your repository's **Settings** tab.
-3. In the left sidebar, click **Pages**.
-4. Under **Build and deployment** → **Source**, choose **Deploy from a
-   branch**.
-5. Under **Branch**, choose `main` and folder `/ (root)`, then click
-   **Save**.
-6. Wait a minute, then refresh the page — GitHub will show you a live
-   URL like:
+     changes.
+2. On GitHub, go to your repository's **Actions** tab and wait for the
+   "Deploy to GitHub Pages" run to finish (a minute or two).
+3. Go to **Settings → Pages** — you'll see your live URL, something like:
 
    ```
    https://your-username.github.io/your-repo-name/
