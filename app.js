@@ -1,171 +1,333 @@
-// ---- Storage helpers ----
-// All entries are saved in the browser's localStorage as a JSON string,
-// under this one key. That means your data stays on this device only.
-const STORAGE_KEY = "runJournalEntries";
+// ---- Supabase setup ----
+const isConfigured =
+  typeof SUPABASE_URL !== "undefined" &&
+  typeof SUPABASE_ANON_KEY !== "undefined" &&
+  !SUPABASE_URL.includes("YOUR-PROJECT-ID") &&
+  !SUPABASE_ANON_KEY.includes("YOUR-ANON-PUBLIC-KEY");
 
-function loadEntries() {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  return raw ? JSON.parse(raw) : [];
-}
+const supabaseClient = isConfigured
+  ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
 
-function saveEntries(entries) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+// ---- Department colors (used for little dots/chips on the calendar) ----
+const DEPARTMENT_COLORS = {
+  "F&B Training": "#e07a5f",
+  "FO Training": "#3d5a80",
+  "HK Training": "#81b29a",
+  "General Training": "#f2cc8f",
+  Admin: "#9b5de5",
+};
+
+function colorForDepartment(department) {
+  return DEPARTMENT_COLORS[department] || "#888";
 }
 
 // ---- Element references ----
-const listView = document.getElementById("list-view");
-const formView = document.getElementById("form-view");
-const entriesList = document.getElementById("entries-list");
-const emptyMessage = document.getElementById("empty-message");
+const configWarning = document.getElementById("config-warning");
+const loadingMessage = document.getElementById("loading-message");
+const monthLabel = document.getElementById("month-label");
+const calendarGrid = document.getElementById("calendar-grid");
+const prevMonthBtn = document.getElementById("prev-month-btn");
+const nextMonthBtn = document.getElementById("next-month-btn");
+const todayBtn = document.getElementById("today-btn");
+const addEntryFab = document.getElementById("add-entry-fab");
+
+const entryModal = document.getElementById("entry-modal");
 const entryForm = document.getElementById("entry-form");
-const dateInput = document.getElementById("entry-date");
-const distanceInput = document.getElementById("entry-distance");
-const notesInput = document.getElementById("entry-notes");
-const newEntryBtn = document.getElementById("new-entry-btn");
-const cancelBtn = document.getElementById("cancel-btn");
-const deleteBtn = document.getElementById("delete-btn");
+const entryDateInput = document.getElementById("entry-date");
+const entryNameInput = document.getElementById("entry-name");
+const entryDepartmentInput = document.getElementById("entry-department");
+const entryActivityInput = document.getElementById("entry-activity");
+const entryFormError = document.getElementById("entry-form-error");
+const cancelEntryBtn = document.getElementById("cancel-entry-btn");
 
-// Tracks which entry is currently open for editing (null = adding a new one)
-let editingId = null;
+const dayModal = document.getElementById("day-modal");
+const dayModalTitle = document.getElementById("day-modal-title");
+const dayModalList = document.getElementById("day-modal-list");
+const addForDayBtn = document.getElementById("add-for-day-btn");
+const closeDayModalBtn = document.getElementById("close-day-modal-btn");
 
-// ---- View switching ----
-function showListView() {
-  formView.hidden = true;
-  listView.hidden = false;
-  renderEntries();
+// ---- State ----
+let allEntries = []; // flat list of all entries from Supabase
+let currentMonth = startOfMonth(new Date());
+let dayModalDate = null; // ISO date string currently shown in the day modal
+
+// ---- Date helpers ----
+function startOfMonth(date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
 }
 
-function showFormView() {
-  listView.hidden = true;
-  formView.hidden = false;
+function toISODate(date) {
+  const offset = date.getTimezoneOffset();
+  const local = new Date(date.getTime() - offset * 60 * 1000);
+  return local.toISOString().slice(0, 10);
 }
 
-// ---- Rendering the list of past entries ----
-function renderEntries() {
-  const entries = loadEntries();
-
-  // Newest first, sorted by date
-  entries.sort((a, b) => b.date.localeCompare(a.date));
-
-  entriesList.innerHTML = "";
-
-  if (entries.length === 0) {
-    emptyMessage.hidden = false;
-    return;
-  }
-  emptyMessage.hidden = true;
-
-  for (const entry of entries) {
-    const card = document.createElement("div");
-    card.className = "entry-card";
-    card.dataset.id = entry.id;
-
-    const top = document.createElement("div");
-    top.className = "entry-card-top";
-
-    const dateSpan = document.createElement("span");
-    dateSpan.className = "entry-card-date";
-    dateSpan.textContent = formatDate(entry.date);
-
-    const distanceSpan = document.createElement("span");
-    distanceSpan.className = "entry-card-distance";
-    distanceSpan.textContent = `${entry.distance} mi`;
-
-    top.appendChild(dateSpan);
-    top.appendChild(distanceSpan);
-    card.appendChild(top);
-
-    if (entry.notes) {
-      const notesDiv = document.createElement("div");
-      notesDiv.className = "entry-card-notes";
-      notesDiv.textContent = entry.notes;
-      card.appendChild(notesDiv);
-    }
-
-    card.addEventListener("click", () => openEntry(entry.id));
-    entriesList.appendChild(card);
-  }
+function todayISODate() {
+  return toISODate(new Date());
 }
 
-function formatDate(isoDate) {
-  // isoDate is "YYYY-MM-DD"; show it in a friendlier format
+function formatDateHuman(isoDate) {
   const [year, month, day] = isoDate.split("-").map(Number);
   const d = new Date(year, month - 1, day);
   return d.toLocaleDateString(undefined, {
-    weekday: "short",
-    month: "short",
+    weekday: "long",
+    month: "long",
     day: "numeric",
     year: "numeric",
   });
 }
 
-// ---- Opening the form for a new or existing entry ----
-function openNewEntry() {
-  editingId = null;
-  entryForm.reset();
-  dateInput.value = todayAsISODate();
-  deleteBtn.hidden = true;
-  showFormView();
-}
-
-function openEntry(id) {
-  const entries = loadEntries();
-  const entry = entries.find((e) => e.id === id);
-  if (!entry) return;
-
-  editingId = id;
-  dateInput.value = entry.date;
-  distanceInput.value = entry.distance;
-  notesInput.value = entry.notes;
-  deleteBtn.hidden = false;
-  showFormView();
-}
-
-function todayAsISODate() {
-  const now = new Date();
-  const offset = now.getTimezoneOffset();
-  const local = new Date(now.getTime() - offset * 60 * 1000);
-  return local.toISOString().slice(0, 10);
-}
-
-// ---- Saving and deleting ----
-function handleSubmit(event) {
-  event.preventDefault();
-
-  const entries = loadEntries();
-
-  if (editingId) {
-    const entry = entries.find((e) => e.id === editingId);
-    entry.date = dateInput.value;
-    entry.distance = distanceInput.value;
-    entry.notes = notesInput.value;
-  } else {
-    entries.push({
-      id: crypto.randomUUID(),
-      date: dateInput.value,
-      distance: distanceInput.value,
-      notes: notesInput.value,
-    });
+// ---- Loading entries from Supabase ----
+async function loadEntries() {
+  if (!supabaseClient) {
+    loadingMessage.hidden = true;
+    renderCalendar();
+    return;
   }
 
-  saveEntries(entries);
-  showListView();
+  loadingMessage.hidden = false;
+  const { data, error } = await supabaseClient
+    .from("entries")
+    .select("*")
+    .order("entry_date", { ascending: true });
+
+  loadingMessage.hidden = true;
+
+  if (error) {
+    console.error("Failed to load entries:", error);
+    loadingMessage.hidden = false;
+    loadingMessage.textContent = "Couldn't load entries. Check your Supabase setup in config.js.";
+    return;
+  }
+
+  allEntries = data;
+  renderCalendar();
+  if (dayModalDate) renderDayModal(dayModalDate);
 }
 
-function handleDelete() {
-  if (!editingId) return;
-  if (!confirm("Delete this entry? This can't be undone.")) return;
+function subscribeToRealtimeUpdates() {
+  if (!supabaseClient) return;
 
-  const entries = loadEntries().filter((e) => e.id !== editingId);
-  saveEntries(entries);
-  showListView();
+  supabaseClient
+    .channel("entries-changes")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "entries" },
+      () => {
+        loadEntries();
+      }
+    )
+    .subscribe();
+}
+
+// ---- Grouping entries by date ----
+function entriesForDate(isoDate) {
+  return allEntries.filter((e) => e.entry_date === isoDate);
+}
+
+// ---- Rendering the calendar ----
+function renderCalendar() {
+  monthLabel.textContent = currentMonth.toLocaleDateString(undefined, {
+    month: "long",
+    year: "numeric",
+  });
+
+  calendarGrid.innerHTML = "";
+
+  const year = currentMonth.getFullYear();
+  const month = currentMonth.getMonth();
+  const firstWeekday = new Date(year, month, 1).getDay(); // 0 = Sunday
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const today = todayISODate();
+
+  // Leading blank cells so day 1 lines up under the right weekday
+  for (let i = 0; i < firstWeekday; i++) {
+    const blank = document.createElement("div");
+    blank.className = "calendar-cell calendar-cell-blank";
+    calendarGrid.appendChild(blank);
+  }
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const isoDate = toISODate(new Date(year, month, day));
+    const dayEntries = entriesForDate(isoDate);
+
+    const cell = document.createElement("button");
+    cell.type = "button";
+    cell.className = "calendar-cell";
+    if (isoDate === today) cell.classList.add("calendar-cell-today");
+    if (dayEntries.length > 0) cell.classList.add("calendar-cell-has-entries");
+
+    const dayNumber = document.createElement("span");
+    dayNumber.className = "calendar-day-number";
+    dayNumber.textContent = day;
+    cell.appendChild(dayNumber);
+
+    if (dayEntries.length > 0) {
+      const chips = document.createElement("div");
+      chips.className = "calendar-day-chips";
+
+      const visible = dayEntries.slice(0, 3);
+      for (const entry of visible) {
+        const dot = document.createElement("span");
+        dot.className = "chip-dot";
+        dot.style.backgroundColor = colorForDepartment(entry.department);
+        dot.title = `${entry.name} — ${entry.department}`;
+        chips.appendChild(dot);
+      }
+      if (dayEntries.length > 3) {
+        const more = document.createElement("span");
+        more.className = "chip-more";
+        more.textContent = `+${dayEntries.length - 3}`;
+        chips.appendChild(more);
+      }
+      cell.appendChild(chips);
+
+      const countBadge = document.createElement("span");
+      countBadge.className = "calendar-day-count";
+      countBadge.textContent = dayEntries.length;
+      cell.appendChild(countBadge);
+    }
+
+    cell.addEventListener("click", () => openDayModal(isoDate));
+    calendarGrid.appendChild(cell);
+  }
+}
+
+// ---- Day details modal ----
+function openDayModal(isoDate) {
+  dayModalDate = isoDate;
+  renderDayModal(isoDate);
+  dayModal.showModal();
+}
+
+function renderDayModal(isoDate) {
+  dayModalTitle.textContent = formatDateHuman(isoDate);
+  const dayEntries = entriesForDate(isoDate);
+
+  dayModalList.innerHTML = "";
+
+  if (dayEntries.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "empty-message";
+    empty.textContent = "Nothing logged for this day yet.";
+    dayModalList.appendChild(empty);
+    return;
+  }
+
+  for (const entry of dayEntries) {
+    const item = document.createElement("div");
+    item.className = "day-entry-item";
+
+    const header = document.createElement("div");
+    header.className = "day-entry-header";
+
+    const dot = document.createElement("span");
+    dot.className = "chip-dot";
+    dot.style.backgroundColor = colorForDepartment(entry.department);
+    header.appendChild(dot);
+
+    const name = document.createElement("span");
+    name.className = "day-entry-name";
+    name.textContent = entry.name;
+    header.appendChild(name);
+
+    const department = document.createElement("span");
+    department.className = "day-entry-department";
+    department.textContent = entry.department;
+    header.appendChild(department);
+
+    item.appendChild(header);
+
+    const activity = document.createElement("p");
+    activity.className = "day-entry-activity";
+    activity.textContent = entry.activity;
+    item.appendChild(activity);
+
+    dayModalList.appendChild(item);
+  }
+}
+
+// ---- Add entry modal ----
+function openEntryModal(prefillDate) {
+  entryForm.reset();
+  entryFormError.hidden = true;
+  entryDateInput.value = prefillDate || todayISODate();
+  entryModal.showModal();
+}
+
+async function handleEntrySubmit(event) {
+  event.preventDefault();
+
+  if (!supabaseClient) {
+    entryFormError.textContent =
+      "Supabase isn't configured yet — see the README to set up config.js.";
+    entryFormError.hidden = false;
+    return;
+  }
+
+  const saveBtn = document.getElementById("save-entry-btn");
+  saveBtn.disabled = true;
+
+  const newEntry = {
+    entry_date: entryDateInput.value,
+    name: entryNameInput.value,
+    department: entryDepartmentInput.value,
+    activity: entryActivityInput.value.trim(),
+  };
+
+  const { error } = await supabaseClient.from("entries").insert(newEntry);
+
+  saveBtn.disabled = false;
+
+  if (error) {
+    console.error("Failed to save entry:", error);
+    entryFormError.textContent = "Couldn't save this entry. Please try again.";
+    entryFormError.hidden = false;
+    return;
+  }
+
+  entryModal.close();
+  await loadEntries();
 }
 
 // ---- Wire up events ----
-newEntryBtn.addEventListener("click", openNewEntry);
-cancelBtn.addEventListener("click", showListView);
-deleteBtn.addEventListener("click", handleDelete);
-entryForm.addEventListener("submit", handleSubmit);
+prevMonthBtn.addEventListener("click", () => {
+  currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
+  renderCalendar();
+});
 
-// ---- Initial render ----
-renderEntries();
+nextMonthBtn.addEventListener("click", () => {
+  currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1);
+  renderCalendar();
+});
+
+todayBtn.addEventListener("click", () => {
+  currentMonth = startOfMonth(new Date());
+  renderCalendar();
+});
+
+addEntryFab.addEventListener("click", () => openEntryModal());
+cancelEntryBtn.addEventListener("click", () => entryModal.close());
+entryForm.addEventListener("submit", handleEntrySubmit);
+
+addForDayBtn.addEventListener("click", () => {
+  dayModal.close();
+  openEntryModal(dayModalDate);
+});
+closeDayModalBtn.addEventListener("click", () => dayModal.close());
+
+// Clicking the backdrop of a <dialog> closes it
+for (const dialog of [entryModal, dayModal]) {
+  dialog.addEventListener("click", (event) => {
+    if (event.target === dialog) dialog.close();
+  });
+}
+
+// ---- Init ----
+if (!isConfigured) {
+  configWarning.hidden = false;
+}
+
+loadEntries();
+subscribeToRealtimeUpdates();
